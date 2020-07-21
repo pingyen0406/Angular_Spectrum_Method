@@ -41,10 +41,10 @@ yA = S.y'; % Array of window points in the y direction
 dx=0.02e-6; % Spacing between sucessive points in the x direction
 dy=0.02e-6; % Spacing between sucessive points in the y direction
 
-x_width_s = 3*x_width;
-y_width_s = 3*y_width;
-xA_s = cat(2,[xA(1)-1*x_width:dx:xA(1)],xA(2:end-1),[xA(end):dx:xA(end)+1*x_width]);
-yA_s = cat(2,[yA(1)-1*y_width:dy:yA(1)],yA(2:end-1),[yA(end):dy:yA(end)+1*y_width]);
+x_width_s = 4*x_width;
+y_width_s = 4*y_width;
+xA_s = cat(2,[xA(1)-1.5*x_width:dx:xA(1)],xA(2:end-1),[xA(end):dx:xA(end)+1.5*x_width]);
+yA_s = cat(2,[yA(1)-1.5*y_width:dy:yA(1)],yA(2:end-1),[yA(end):dy:yA(end)+1.5*y_width]);
 [XA_s,YA_s] = meshgrid(xA_s,yA_s);
 
 obj_size=size(XA_s); 
@@ -85,20 +85,20 @@ title('Source field')
 tic;
 
 A0 = fftshift(fft2(E0));
-
-propagation_distance = 100e-6;
-nz = 41;
-
-z = linspace(0,propagation_distance,nz);
-E = zeros(obj_size(1),obj_size(2),nz);
+prop_L = 100e-6;
+nz = 101;
+z_list = linspace(0,prop_L,nz);
+E = zeros(obj_size(1),obj_size(2));
+E_row = zeros(obj_size(2),nz);
+E_col = zeros(obj_size(1),nz);
 
 for i=1:nz
     %transfer function for free space
-    T = exp(1i*k.*gamma_cust.*(z(1,i)));
+    T = exp(1i*k.*gamma_cust.*(z_list(1,i)));
     
     %band limiting
-    ulx = 1/(((2*dFx*z(1,i))^2+1)^0.5*lambda);
-    uly = 1/(((2*dFy*z(1,i))^2+1)^0.5*lambda);
+    ulx = 1/(((2*dFx*z_list(1,i))^2+1)^0.5*lambda);
+    uly = 1/(((2*dFy*z_list(1,i))^2+1)^0.5*lambda);
     [~, nx_l] = min(abs(abs(Fx)-ulx));
     [~, ny_l] = min(abs(abs(Fy)-uly));
     if -ulx > Fx(1,nx_l)
@@ -114,14 +114,17 @@ for i=1:nz
     T = T.*Band_Limit_Matrix;
     
     %Calculation
-    E(:,:,i) = ifft2(ifftshift(A0.*T));
+    E = ifft2(ifftshift(A0.*T));
     %figure(i+1)
     %imagesc(abs(E(nx_start:nx_end,ny_start:ny_end,i)))
+    E_row(:,i) = abs(E(1916,:));
+    E_col(:,i) = abs(E(:,1485));
 end
-%EE = abs(E(nx_start:nx_end,ny_start:ny_end,:));
 toc;
-
+figure(2);imagesc(z_list,xA_s,E_row);title("rowSlice");ylabel("x");
+figure(3);imagesc(z_list,yA_s,E_col);title("columnSlice");ylabel("y");
 %%
+%{
 h = figure;
 axis tight manual % this ensures that getframe() returns a consistent size
 filename = 'testAnimated.gif';
@@ -144,3 +147,4 @@ for n = 1:nz
 end
 
 %}
+
