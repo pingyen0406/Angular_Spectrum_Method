@@ -82,6 +82,8 @@ title('Source field')
 
 %%
 %Agular spectrum method
+tic;
+
 A0 = fftshift(fft2(E0));
 
 propagation_distance = 100e-6;
@@ -117,7 +119,7 @@ for i=1:nz
     %imagesc(abs(E(nx_start:nx_end,ny_start:ny_end,i)))
 end
 %EE = abs(E(nx_start:nx_end,ny_start:ny_end,:));
-
+toc;
 
 %%
 h = figure;
