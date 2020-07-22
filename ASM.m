@@ -25,8 +25,6 @@ x_width = max(S.x)-min(S.x); % Computation window width in the x direction
 y_width = max(S.y)-min(S.y); % Computation window width in the y direction
 xA = S.x'; % Array of window points in the x direction
 yA = S.y'; % Array of window points in the y direction
-[XA,YA]=meshgrid(xA,yA); % Aperture grid
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Simulation window %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 dx=0.02e-6; % Spacing outside the source field in the x direction
@@ -69,18 +67,16 @@ Fy=-Fs_y/2:dFy:Fs_y/2; % Points in the Fy direction
 [FX,FY]=meshgrid(Fx,Fy); % Grid in wave-vector space
 % alpha and beta (wavenumber components) 
 alpha = lambda.*FX;
-beta2 = lambda.*FY; 
-gamma_cust = sqrt(1 - alpha.^2 - beta2.^2);
-
+beta = lambda.*FY; 
+gamma_cust = sqrt(1 - alpha.^2 - beta.^2);
+clear FX FY;
+F_struct = struct('Fx',Fx,'Fy',Fy,'dFx',dFx,'dFy',dFy);
 
 %% Agular spectrum method
 tic;
-
-A0 = fftshift(fft2(E0));
-prop_L = 100e-6;
-nz = 101;
+prop_L = 56e-6;
+nz = 1;
 z_list = linspace(0,prop_L,nz);
-E = zeros(obj_size(1),obj_size(2));
 % slice through the focal spot(x,y v.s. propgation distance)
 E_row = zeros(obj_size(2),nz);
 E_col = zeros(obj_size(1),nz);
@@ -88,25 +84,9 @@ plot_gif = false;
 gif_filename = "TEST.gif";
 
 for i=1:nz
-    %transfer function in free space
     T = exp(1i*k.*gamma_cust.*(z_list(1,i)));
+    E = AS_method(E0,T,F_struct,56e-6,1.55e-6);
     
-    %Create band-limiting matrix
-    ulx = 1/(((2*dFx*z_list(1,i))^2+1)^0.5*lambda);
-    uly = 1/(((2*dFy*z_list(1,i))^2+1)^0.5*lambda);
-    [~, nx_l] = min(abs(abs(Fx)-ulx));
-    [~, ny_l] = min(abs(abs(Fy)-uly));
-    if -ulx > Fx(1,nx_l)
-        nx_l = nx_l+1;
-    end    
-    if -uly > Fx(1,ny_l)
-        ny_l = ny_l+1;
-    end
-    Band_Limit_Matrix = zeros(obj_size(1),obj_size(2));
-    Band_Limit_Matrix(nx_l:obj_size(2)-nx_l+1,ny_l:obj_size(1)-ny_l+1)=1;
-    T = T.*Band_Limit_Matrix;
-    %Calculation
-    E = ifft2(ifftshift(A0.*T));
     E_row(:,i) = abs(E(3102,:));
     E_col(:,i) = abs(E(:,2613));
     
@@ -121,8 +101,7 @@ for i=1:nz
             f_real = z_list(i);
         end
     end
-    
-    
+        
     % plot focal plane
     if z_list(i)==56e-6
         E_focal=E;
@@ -147,13 +126,31 @@ for i=1:nz
         else 
             imwrite(imind,cm,gif_filename,'gif','WriteMode','append','DelayTime',1); 
         end
-    end
-    
-    
-    
+    end 
+       
     
 end
 toc;
 figure;imagesc(z_list,xA_s,E_row);title("rowSlice");ylabel("x");
 figure;imagesc(z_list,yA_s,E_col);title("columnSlice");ylabel("y");
+% release some space 
+%clear E0 T alpha beta gamma_cust
 
+
+function E = AS_method(Ein, T, F, z, lambda)
+A0 = fftshift(fft2(Ein));
+%Create band-limiting matrix
+ulx = 1/(((2*F.dFx*z)^2+1)^0.5*lambda);
+uly = 1/(((2*F.dFy*z)^2+1)^0.5*lambda);
+nx_min = find((abs(F.Fx)-ulx)<0,1);
+nx_max = find((abs(F.Fx)-ulx)<0,1,'last');
+ny_min = find((abs(F.Fy)-uly)<0,1);
+ny_max = find((abs(F.Fy)-uly)<0,1,'last');
+
+Band_Limit_Matrix = zeros(size(Ein));
+Band_Limit_Matrix(nx_min:nx_max,ny_min:ny_max)=1;
+T = T.*Band_Limit_Matrix;
+%Calculation
+E = ifft2(ifftshift(A0.*T));
+
+end
