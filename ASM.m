@@ -1,5 +1,5 @@
 % parameters
-clear all; clc;
+clear all;
 lambda0 = 1.55e-6;
 k0 = 2*pi/lambda0;
 n = 1 ; %free space
@@ -37,11 +37,13 @@ end
 for i=1:length(yA)-1
     dy_mid(i) = yA(i+1)-yA(i);
 end
-
-x_width_s = 5*x_width;
-y_width_s = 5*y_width;
-xA_s = cat(2,[xA(1)-2*x_width:dx:xA(1)],xA(2:end-1),[xA(end):dx:xA(end)+2*x_width]);
-yA_s = cat(2,[yA(1)-2*y_width:dy:yA(1)],yA(2:end-1),[yA(end):dy:yA(end)+2*y_width]);
+padding_factor = 10;
+x_width_s = padding_factor*x_width;
+y_width_s = padding_factor*y_width;
+xA_s = cat(2,[xA(1)-(padding_factor-1)/2*x_width:dx:xA(1)],xA(2:end-1),...
+    [xA(end):dx:xA(end)+(padding_factor-1)/2*x_width]);
+yA_s = cat(2,[yA(1)-(padding_factor-1)/2*y_width:dy:yA(1)],yA(2:end-1),...
+    [yA(end):dy:yA(end)+(padding_factor-1)/2*y_width]);
 obj_size=size(meshgrid(xA_s,yA_s)); 
 
 % Combine source field into Computational window
@@ -87,33 +89,22 @@ for i=1:nz
     T = exp(1i*k.*gamma_cust.*(z_list(1,i)));
     E = AS_method(E0,T,F_struct,56e-6,1.55e-6);
     
-    E_row(:,i) = abs(E(3102,:));
-    E_col(:,i) = abs(E(:,2613));
-    
-    if i==40
-        max_val = max(max(abs(E)));
-        [max_row,max_col] = find(abs(E)==max_val);
-    elseif i>40
-        max_val2 = max(max(abs(E)));
-        if max_val2>max_val
-            max_val = max_val2;
-            [max_row,max_col] = find(abs(E)==max_val);
-            f_real = z_list(i);
-        end
-    end
-        
+    %E_row(:,i) = abs(E(3102,:));
+    %E_col(:,i) = abs(E(:,2613));
+               
     % plot focal plane
     if z_list(i)==56e-6
         E_focal=E;
-        figure(3);
-        imagesc(xA_s,yA_s,abs(E));
+        figure;
+        imagesc(xA_s,yA_s,abs(E(nx_start-(nx_end-nx_start):nx_end+(nx_end-nx_start),...
+            ny_start-(ny_end-ny_start):ny_end+(ny_end-ny_start))));
         title("focal plane")
         xlabel("x");ylabel("y");
     end
     
     % plot gif
     if plot_gif==true
-        h = figure(2);
+        h = figure;
         imagesc(xA_s,yA_s,abs(E(:,:)));
         title(['z = ',num2str(z_list(i))]);
         % Capture the plot as an image 
@@ -131,8 +122,8 @@ for i=1:nz
     
 end
 toc;
-figure;imagesc(z_list,xA_s,E_row);title("rowSlice");ylabel("x");
-figure;imagesc(z_list,yA_s,E_col);title("columnSlice");ylabel("y");
+%figure;imagesc(z_list,xA_s,E_row);title("rowSlice");ylabel("x");
+%figure;imagesc(z_list,yA_s,E_col);title("columnSlice");ylabel("y");
 % release some space 
 %clear E0 T alpha beta gamma_cust
 
