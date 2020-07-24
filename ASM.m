@@ -10,7 +10,7 @@ f = 50e-6;
 % Define input source field
 
 % load input E-field file
-S=load('f_50.mat');
+S=load('80nmSiO2_f_50.mat');
 Ey=S.Ey;
 E_i = Ey(:,:,1,2);
 E_i = E_i(2:end,:)';
@@ -37,7 +37,7 @@ end
 for i=1:length(yA)-1
     dy_mid(i) = yA(i+1)-yA(i);
 end
-padding_factor = 10;
+padding_factor = 7;
 x_width_s = padding_factor*x_width;
 y_width_s = padding_factor*y_width;
 xA_s = cat(2,[xA(1)-(padding_factor-1)/2*x_width:dx:xA(1)],xA(2:end-1),...
@@ -76,8 +76,8 @@ F_struct = struct('Fx',Fx,'Fy',Fy,'dFx',dFx,'dFy',dFy);
 
 %% Agular spectrum method
 tic;
-prop_L = 56e-6;
-nz = 1;
+prop_L = 100e-6;
+nz = 101;
 z_list = linspace(0,prop_L,nz);
 % slice through the focal spot(x,y v.s. propgation distance)
 E_row = zeros(obj_size(2),nz);
@@ -87,25 +87,19 @@ gif_filename = "TEST.gif";
 
 for i=1:nz
     T = exp(1i*k.*gamma_cust.*(z_list(1,i)));
-    E = AS_method(E0,T,F_struct,56e-6,1.55e-6);
-    
-    %E_row(:,i) = abs(E(3102,:));
-    %E_col(:,i) = abs(E(:,2613));
-               
-    % plot focal plane
-    if z_list(i)==56e-6
-        E_focal=E;
-        figure;
-        imagesc(xA_s,yA_s,abs(E(nx_start-(nx_end-nx_start):nx_end+(nx_end-nx_start),...
-            ny_start-(ny_end-ny_start):ny_end+(ny_end-ny_start))));
-        title("focal plane")
-        xlabel("x");ylabel("y");
-    end
-    
+    E = AS_method(E0,T,F_struct,z_list(1,i),1.55e-6);
+    E_row(:,i) = abs(E(4304,:));
+    E_col(:,i) = abs(E(:,4018));            
     % plot gif
     if plot_gif==true
-        h = figure;
-        imagesc(xA_s,yA_s,abs(E(:,:)));
+        h = figure(2);
+        imagesc(xA_s,yA_s,abs(E));
+        hold on
+        line([xA(1),xA(end)],[yA(end),yA(end)],'Color','black');
+        line([xA(end),xA(end)],[yA(end),yA(1)],'Color','black');
+        line([xA(end),xA(1)],[yA(1),yA(1)],'Color','black');
+        line([xA(1),xA(1)],[yA(1),yA(end)],'Color','black');
+        hold off
         title(['z = ',num2str(z_list(i))]);
         % Capture the plot as an image 
         frame = getframe(h); 
@@ -113,17 +107,46 @@ for i=1:nz
         [imind,cm] = rgb2ind(im,256); 
         % Write to the GIF File 
         if i == 1 
-            imwrite(imind,cm,gif_filename,'gif', 'Loopcount',Inf,'DelayTime',1); 
+            imwrite(imind,cm,gif_filename,'gif', 'Loopcount',Inf); 
         else 
-            imwrite(imind,cm,gif_filename,'gif','WriteMode','append','DelayTime',1); 
+            imwrite(imind,cm,gif_filename,'gif','WriteMode','append'); 
         end
-    end 
-       
+    end
+    
+    %find the actual focal spot
+    if i==41
+        max_val = max(max(abs(E)));
+        f_real = z_list(i);
+    elseif z_list(i)>40e-6
+        tmp_val = max(max(abs(E)));
+        if tmp_val>max_val
+            max_val = tmp_val;
+            f_real = z_list(i);
+        end
+    end
     
 end
+%}
 toc;
-%figure;imagesc(z_list,xA_s,E_row);title("rowSlice");ylabel("x");
-%figure;imagesc(z_list,yA_s,E_col);title("columnSlice");ylabel("y");
+% plot focal plane
+T = exp(1i*k.*gamma_cust.*f_real);
+E = AS_method(E0,T,F_struct,f_real,1.55e-6);
+plot_range_x = 2*nx_start-nx_end:2*nx_end-nx_start;
+plot_range_y = 2*ny_start-ny_end:2*ny_end-ny_start;
+figure;
+imagesc(xA_s(plot_range_x),yA_s(plot_range_y),abs(E(plot_range_x,plot_range_y)));
+hold on
+% source field area
+line([xA(1),xA(end)],[yA(end),yA(end)],'Color','black');
+line([xA(end),xA(end)],[yA(end),yA(1)],'Color','black');
+line([xA(end),xA(1)],[yA(1),yA(1)],'Color','black');
+line([xA(1),xA(1)],[yA(1),yA(end)],'Color','black');
+hold off
+title(["focal plane_",num2str(f_real)]);
+xlabel("x");ylabel("y");
+
+figure;imagesc(z_list,xA_s,E_row);title("rowSlice");ylabel("x");
+figure;imagesc(z_list,yA_s,E_col);title("columnSlice");ylabel("y");
 % release some space 
 %clear E0 T alpha beta gamma_cust
 
