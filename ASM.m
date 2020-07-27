@@ -16,7 +16,8 @@ E_i = Ey(:,:,1,2);
 E_i = E_i(2:end,:)';
 source_size = size(E_i);
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Input Field window %%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+dx=0.02e-6; % Spacing outside the source field in the x direction
+dy=0.02e-6; % Spacing outside the source field in the y direction
 % nx and ny have to be odd, so that no artifacts are introduced when calculating the discrete Fourier transform
 % If they are even, the propagated beam will be shifted from its center, for example
 nx=source_size(2); % Number of grid points in the x direction
@@ -25,10 +26,12 @@ x_width = max(S.x)-min(S.x); % Computation window width in the x direction
 y_width = max(S.y)-min(S.y); % Computation window width in the y direction
 xA = S.x'; % Array of window points in the x direction
 yA = S.y'; % Array of window points in the y direction
-
+%xA_n = (min(xA)):dx:(max(xA));
+%yA_n = (min(yA)):dy:(max(yA));
+%[XA_n,YA_n] = ndgrid(xA_n,yA_n);
+%Ei_n = griddedInterpolant(XA_n,YA_n,E_i);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Simulation window %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-dx=0.02e-6; % Spacing outside the source field in the x direction
-dy=0.02e-6; % Spacing outside the source field in the y direction
+
 dx_mid = zeros(1,length(xA));% spacing of the source field in x direction
 dy_mid = zeros(1,length(yA));% spacing of the source field in y direction
 for i=1:length(xA)-1
@@ -88,12 +91,12 @@ gif_filename = "TEST.gif";
 for i=1:nz
     T = exp(1i*k.*gamma_cust.*(z_list(1,i)));
     E = AS_method(E0,T,F_struct,z_list(1,i),1.55e-6);
-    E_row(:,i) = abs(E(4304,:));
-    E_col(:,i) = abs(E(:,4018));            
+    E_row(:,i) = abs(E(4304,:))^2;
+    E_col(:,i) = abs(E(:,4018))^2;            
     % plot gif
     if plot_gif==true
         h = figure(2);
-        imagesc(xA_s,yA_s,abs(E));
+        imagesc(xA_s,yA_s,abs(E)^2);
         hold on
         line([xA(1),xA(end)],[yA(end),yA(end)],'Color','black');
         line([xA(end),xA(end)],[yA(end),yA(1)],'Color','black');
